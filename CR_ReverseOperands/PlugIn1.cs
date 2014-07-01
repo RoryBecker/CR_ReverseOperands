@@ -90,9 +90,14 @@ namespace CR_ReverseOperands
         private void ReverseOperands_Apply(Object sender, ApplyContentEventArgs ea)
         {
             SourceRange Range;
-            ea.TextDocument.GetSelection(out Range);
-            ReverseLanguageElements(_startElement, _endElement);
-            CodeRush.Selection.SelectRange(Range);
+
+            using (ea.TextDocument.NewCompoundAction("Reverse Operands"))
+            {
+                ea.TextDocument.GetSelection(out Range);
+                ReverseLanguageElements(_startElement, _endElement);
+                CodeRush.Selection.SelectRange(Range);
+               
+            }
             
         }
         private void ReverseLanguageElements(LanguageElement Element1, LanguageElement Element2)
@@ -103,8 +108,10 @@ namespace CR_ReverseOperands
             string Code1 = CodeRush.Language.GenerateElement(Element1);
             string Code2 = CodeRush.Language.GenerateElement(Element2);
 
-            CodeRush.Documents.ActiveTextDocument.SetText(Range1, Code2);
-            CodeRush.Documents.ActiveTextDocument.SetText(Range2, Code1);
+            TextDocument ActiveDoc = CodeRush.Documents.ActiveTextDocument;
+            ActiveDoc.QueueReplace(Element1, Code2);
+            ActiveDoc.QueueReplace(Element2, Code1);
+            ActiveDoc.ApplyQueuedEdits();
         }
 
 
