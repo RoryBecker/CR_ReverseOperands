@@ -63,7 +63,6 @@ namespace CR_ReverseOperands
             var Operators = GetBinaryOperators(CodeRush.Documents.ActiveTextDocument, Range);
             if (Operators.Count() != 1)
                 return;
-
             ea.Available = true;
         }
 
@@ -72,7 +71,8 @@ namespace CR_ReverseOperands
             List<LanguageElement> Nodes = GetNodesInRange(Doc, range);
 
             return (from node in Nodes
-                    where node.ElementType == LanguageElementType.BinaryOperatorExpression
+                    where node.ElementType.In(LanguageElementType.BinaryOperatorExpression, 
+                                              LanguageElementType.LogicalOperation)
                     select (BinaryOperatorExpression)node);
         }
         private static List<LanguageElement> GetNodesInRange(TextDocument Doc, SourceRange range)
@@ -113,7 +113,12 @@ namespace CR_ReverseOperands
             ActiveDoc.QueueReplace(Element2, Code1);
             ActiveDoc.ApplyQueuedEdits();
         }
-
-
+    }
+    public static class LanguageElementExt
+    {
+        public static bool In(this LanguageElementType source, params LanguageElementType[] types)
+        {
+            return types.Contains(source);
+        }
     }
 }
