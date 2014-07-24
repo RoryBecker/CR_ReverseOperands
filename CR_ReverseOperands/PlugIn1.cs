@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using DevExpress.CodeRush.Core;
 using DevExpress.CodeRush.PlugInCore;
 using DevExpress.CodeRush.StructuralParser;
+using System.Collections;
 
 namespace CR_ReverseOperands
 {
@@ -60,20 +61,38 @@ namespace CR_ReverseOperands
             if (_startElement.Parent == null)
                 return; // not sure how, but cover ourselves anyway :)
 
-            var Operators = GetBinaryOperators(CodeRush.Documents.ActiveTextDocument, Range);
-            if (Operators.Count() != 1)
+            BinaryOperatorExpression  Operator = GetSharedBinaryOperator(CodeRush.Documents.ActiveTextDocument, _startElement, _endElement);
+            if (Operator == null)
                 return;
+            _startElement = Operator.LeftSide;
+            _endElement = Operator.RightSide;
             ea.Available = true;
         }
 
-        private IEnumerable<BinaryOperatorExpression> GetBinaryOperators(TextDocument Doc, SourceRange range)
+        private BinaryOperatorExpression GetSharedBinaryOperator(TextDocument doc, LanguageElement startElement, LanguageElement endElement)
         {
-            List<LanguageElement> Nodes = GetNodesInRange(Doc, range);
 
-            return (from node in Nodes
-                    where node.ElementType.In(LanguageElementType.BinaryOperatorExpression, 
-                                              LanguageElementType.LogicalOperation)
-                    select (BinaryOperatorExpression)node);
+            // return first common factor which is also BinaryOperatorExpression
+            IEnumerable<LanguageElement> AllStartAncestors = getAllAncestors(startElement);
+            IEnumerable<LanguageElement> AllEndAncestors = getAllAncestors(endElement);
+
+            // Not sure of this ??? Test 
+            var FirstCommon = AllStartAncestors.Intersect(AllEndAncestors)
+                              .First(f => f.ElementType.In(LanguageElementType.BinaryOperatorExpression,
+                                                           LanguageElementType.LogicalOperation, 
+                                                           LanguageElementType.RelationalOperation));
+            return ((BinaryOperatorExpression)FirstCommon);
+        }
+        private IEnumerable<LanguageElement> getAllAncestors(LanguageElement element)
+        {
+            List<LanguageElement> results = new List<LanguageElement>();
+            results.Add(element);
+            while (element.Parent != null)
+            {
+                element = element.Parent;
+                results.Add(element);
+            }
+            return results;
         }
         private static List<LanguageElement> GetNodesInRange(TextDocument Doc, SourceRange range)
         {
